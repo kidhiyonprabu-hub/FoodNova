@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FoodRush - Smart Online Food Ordering System powered by C Multi-threading Architecture">
+  <title>FoodRush | Multi-Threaded Food Ordering System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dark-theme">
+  <!-- Top OS Concurrency Ticker -->
+  <aside class="os-ticker" id="osTicker" aria-label="OS Concurrency Status">
+    <div class="ticker-content">
+      <span class="ticker-badge"><span class="pulse-dot"></span> C KERNEL ACTIVE</span>
+      <span class="ticker-item">Worker Threads: <strong id="tickerWorkers">8 / 8 Online</strong></span>
+      <span class="ticker-item">Task Queue: <strong id="tickerQueue">0 / 128</strong></span>
+      <span class="ticker-item">Synchronization: <strong>Pthread Mutex + CondVar</strong></span>
+      <span class="ticker-item">Database: <strong>SQLite3 (WAL Mode)</strong></span>
+      <span class="ticker-item">Tasks Completed: <strong id="tickerCompleted">0</strong></span>
+    </div>
+  </aside>
+
+  <!-- Navigation Bar -->
+  <header class="navbar" id="navbar">
+    <div class="nav-container">
+      <div class="nav-brand" id="brandBtn">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8h1a4 44 0 0 1 0 8h-1"></path>
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+            <line x1="6" y1="1" x2="6" y2="4"></line>
+            <line x1="10" y1="1" x2="10" y2="4"></line>
+            <line x1="14" y1="1" x2="14" y2="4"></line>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Food<span class="highlight">Rush</span></span>
+          <span class="brand-tag">OS Multi-Threaded Engine</span>
+        </div>
+      </div>
+
+      <div class="nav-search">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search delicious dishes, categories, ingredients..." autocomplete="off">
+        <button class="clear-search" id="clearSearchBtn" aria-label="Clear Search">&times;</button>
+      </div>
+
+      <div class="nav-actions">
+        <button class="nav-btn ghost-btn" id="openMonitorBtn" title="View OS Thread Concurrency Dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          <span class="btn-text">OS Threads</span>
+          <span class="badge-mini" id="activeWorkerBadge">8</span>
+        </button>
+
+        <button class="nav-btn ghost-btn" id="adminPortalBtn" title="Admin Control Center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
+            <path d="M12 6a2 2 0 1 0 2 2 2 2 0 0 0-2-2zm0 8a2 2 0 1 0 2 2 2 2 0 0 0-2-2z"></path>
+          </svg>
+          <span class="btn-text" id="adminBtnLabel">Admin / Demo</span>
+        </button>
+
+        <button class="nav-btn ghost-btn" id="audioToggleBtn" title="Toggle Sound Effects">
+          <span id="audioIcon">🔊</span>
+          <span class="btn-text" id="audioBtnText">Sound: ON</span>
+        </button>
+
+        <button class="nav-btn primary-btn cart-btn" id="cartToggleBtn" aria-label="Open Cart">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span class="cart-label">Cart</span>
+          <span class="cart-counter" id="cartCount">0</span>
+        </button>
+
+        <div class="user-profile-menu" id="userProfileArea">
+          <button class="nav-btn ghost-btn" id="authBtn">Sign In</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-glow"></div>
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="hero-chip">
+          <span class="badge-glow"></span>
+          <span>🚀 Autonomous Ultra-Low-Latency Delivery Platform &bull; Zero-Wait Multi-Core Dispatch</span>
+        </div>
+        <h1 class="hero-title">
+          Lightning Fast Food Delivery with <span class="gradient-text">Concurrent C Threads</span>
+        </h1>
+        <p class="hero-desc">
+          Engineered with an ultra-optimized native C backend. Features POSIX thread pool synchronization, atomic mutex locks, custom HTTP streaming engine, and SQLite WAL transactions for high-throughput order execution.
+        </p>
+        <div class="hero-buttons">
+          <a href="#menuSection" class="btn-primary-lg">Explore Menu</a>
+          <button class="btn-secondary-lg" id="heroSimulateBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Simulate 25 Concurrent Orders
+          </button>
+        </div>
+      </div>
+      <div class="hero-stats-card">
+        <div class="stats-header">
+          <div class="stats-icon">⚡</div>
+          <div>
+            <h3>C Concurrency Engine</h3>
+            <p>POSIX Threads + Condition Variables</p>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-num" id="heroStatWorkers">8</span>
+            <span class="stat-lbl">Worker Pool</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-num" id="heroStatDelivered">0</span>
+            <span class="stat-lbl">Delivered</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-num" id="heroStatRevenue">₹0.00</span>
+            <span class="stat-lbl">Total Sales</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-num" id="heroStatQueue">0</span>
+            <span class="stat-lbl">Queue Depth</span>
+          </div>
+        </div>
+        <div class="stat-footer">
+          <span>System Architecture: Multi-Core POSIX Threadpool &bull; Zero-Contention Mutexes &bull; High-Throughput Socket Engine</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Layout -->
+  <main class="main-content" id="menuSection">
+    <div class="content-container">
+      <!-- Category Filters & Controls -->
+      <div class="filter-bar">
+        <div class="category-tabs" id="categoryTabs">
+          <button class="cat-tab active" data-category="ALL">All Items</button>
+          <button class="cat-tab" data-category="Pizza">🍕 Pizzas</button>
+          <button class="cat-tab" data-category="Burgers">🍔 Burgers</button>
+          <button class="cat-tab" data-category="Indian">🍛 Indian Curries</button>
+          <button class="cat-tab" data-category="Salads">🥗 Salads</button>
+          <button class="cat-tab" data-category="Desserts">🍰 Desserts</button>
+          <button class="cat-tab" data-category="Drinks">🥤 Drinks</button>
+        </div>
+        <div class="filter-tools">
+          <select id="sortSelect" class="custom-select" aria-label="Sort Menu Items">
+            <option value="popular">Most Popular</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating">Highest Rated</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Menu Grid -->
+      <div class="menu-header">
+        <div>
+          <h2 class="section-title" id="sectionTitle">Chef's Fresh Menu</h2>
+          <p class="section-subtitle" id="itemCountDisplay">Showing 16 delicious dishes</p>
+        </div>
+      </div>
+
+      <div class="menu-grid" id="menuGrid">
+        <!-- Rendered dynamically by JavaScript -->
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Connecting to FoodRush C Backend Engine...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- My Orders Section -->
+  <section class="orders-section" id="ordersSection">
+    <div class="content-container">
+      <div class="section-heading-row">
+        <div>
+          <h2 class="section-title">Live Order Processing Pipeline</h2>
+          <p class="section-subtitle">Real-time status tracking processed by backend C worker threads</p>
+        </div>
+        <button class="btn-refresh" id="refreshOrdersBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          Refresh Orders
+        </button>
+      </div>
+
+      <div class="orders-table-wrapper">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Items &amp; Total</th>
+              <th>Status</th>
+              <th>Worker Thread</th>
+              <th>Timestamp</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <tr>
+              <td colspan="7" class="empty-state">No orders placed yet. Add items to your cart and place an order!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- OS Multi-Threading Dashboard Modal -->
+  <div class="modal-backdrop" id="monitorModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card monitor-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">⚙️</div>
+          <div>
+            <h3 id="modalTitle">OS Multi-Threading Concurrency Architecture</h3>
+            <p>Inspection of C Thread Pool, Mutex Synchronization &amp; Task Queue</p>
+          </div>
+        </div>
+        <button class="modal-close" id="closeMonitorBtn">&times;</button>
+      </div>
+
+      <div class="modal-body monitor-body">
+        <!-- Concurrency Metrics -->
+        <div class="concurrency-grid">
+          <div class="metric-card">
+            <div class="metric-title">Active Workers</div>
+            <div class="metric-val text-accent" id="monActiveWorkers">8 / 8</div>
+            <div class="metric-sub">Pthread Worker Threads</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Task Queue Depth</div>
+            <div class="metric-val text-warning" id="monQueueDepth">0 / 128</div>
+            <div class="metric-sub">Bounded Circular Buffer</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Completed Orders</div>
+            <div class="metric-val text-success" id="monCompleted">0</div>
+            <div class="metric-sub">Safely Processed</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Thread Locks (Mutex)</div>
+            <div class="metric-val text-info">Zero Contention</div>
+            <div class="metric-sub">pthread_mutex_t Active</div>
+          </div>
+        </div>
+
+        <!-- Thread Pool Visualizer -->
+        <div class="thread-visualizer">
+          <h4 class="visualizer-heading">Worker Threads Live State</h4>
+          <div class="worker-chips" id="workerChipsContainer">
+            <!-- 8 worker chips -->
+          </div>
+        </div>
+
+        <!-- Real-time Processing Logs -->
+        <div class="logs-section">
+          <div class="logs-header">
+            <h4>Live C Kernel Processing Stream</h4>
+            <span class="live-pill"><span class="pulse-dot"></span> LIVE POLLING</span>
+          </div>
+          <pre class="terminal-view" id="terminalLogs">Connecting to /api/logs endpoint...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin & Simulation Dashboard Modal -->
+  <div class="modal-backdrop" id="adminModal" role="dialog" aria-modal="true">
+    <div class="modal-card admin-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">🛠️</div>
+          <div>
+            <h3>Admin &amp; Concurrency Stress Lab</h3>
+            <p>Run simulated parallel orders and manage inventory</p>
+          </div>
+        </div>
+        <button class="modal-close" id="closeAdminBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="admin-tabs">
+          <button class="adm-tab active" data-tab="simTab">Order Stress Simulation</button>
+          <button class="adm-tab" data-tab="menuTab">Menu &amp; Stock Manager</button>
+          <button class="adm-tab" data-tab="authTab">Credentials &amp; Roles</button>
+        </div>
+
+        <!-- Tab 1: Simulation -->
+        <div class="adm-tab-panel active" id="simTab">
+          <div class="sim-banner">
+            <h4>Multi-Thread Stress Testing (CO1, CO4)</h4>
+            <p>Spawn multiple asynchronous orders simultaneously to observe queue saturation, thread pool distribution, and mutex concurrency safety.</p>
+          </div>
+
+          <div class="sim-controls">
+            <div class="form-group">
+              <label for="simCountInput">Concurrent Orders to Submit:</label>
+              <input type="number" id="simCountInput" class="custom-input" min="1" max="100" value="20">
+            </div>
+            <div class="sim-buttons">
+              <button class="btn-primary" id="runSimBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Launch Simulation
+              </button>
+              <button class="btn-secondary" id="sim10Btn">Simulate 10</button>
+              <button class="btn-secondary" id="sim50Btn">Simulate 50</button>
+            </div>
+          </div>
+          <div class="sim-status" id="simStatusBox">Ready to run simulation.</div>
+        </div>
+
+        <!-- Tab 2: Menu Stock Manager -->
+        <div class="adm-tab-panel" id="menuTab">
+          <div class="stock-manager-header">
+            <h4>Update Inventory Stock &amp; Availability</h4>
+          </div>
+          <div class="stock-table-wrap">
+            <table class="stock-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="stockTableBody">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Auth & Credentials -->
+        <div class="adm-tab-panel" id="authTab">
+          <div class="credentials-box">
+            <h4>Default System Test Accounts:</h4>
+            <div class="cred-row">
+              <strong>Admin User:</strong> <code>admin</code> / <code>admin123</code> (Role: Admin)
+              <button class="btn-small ghost-btn" id="quickLoginAdmin">One-Click Login Admin</button>
+            </div>
+            <div class="cred-row">
+              <strong>Customer User:</strong> <code>john</code> / <code>password123</code> (Role: Customer)
+              <button class="btn-small ghost-btn" id="quickLoginCustomer">One-Click Login John</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shopping Cart Sidebar Drawer -->
+  <aside class="cart-drawer" id="cartDrawer" aria-label="Shopping Cart">
+    <div class="cart-header">
+      <div class="cart-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <h3>Your Order (<span id="cartDrawerCount">0</span>)</h3>
+      </div>
+      <button class="close-cart-btn" id="closeCartBtn">&times;</button>
+    </div>
+
+    <div class="cart-body" id="cartItemsList">
+      <div class="empty-cart-view">
+        <span class="empty-icon">🛒</span>
+        <h4>Your cart is empty</h4>
+        <p>Browse our menu and pick delicious items!</p>
+      </div>
+    </div>
+
+    <div class="cart-footer" id="cartFooter">
+      <!-- Coupon / Promo Code Innovation -->
+      <div class="promo-box">
+        <div class="promo-input-row">
+          <input type="text" id="promoInput" placeholder="Promo: RUSH50 / FREEDEL">
+          <button type="button" class="btn-apply-promo" id="applyPromoBtn">Apply</button>
+        </div>
+        <div class="promo-applied-badge" id="promoBadge" style="display:none">
+          <span id="promoBadgeText">Coupon applied!</span>
+          <button type="button" id="removePromoBtn">&times;</button>
+        </div>
+      </div>
+
+      <div class="cart-summary">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="cartSubtotal">₹0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>GST &amp; Taxes (5%)</span>
+          <span id="cartTax">₹0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>Delivery Charges</span>
+          <span class="free-tag" id="cartDelivery">₹30.00</span>
+        </div>
+        <div class="summary-row" id="promoRow" style="display:none">
+          <span>Promo Discount</span>
+          <span class="text-success" id="cartDiscount">-₹0.00</span>
+        </div>
+        <div class="summary-row total-row">
+          <span>Total Amount</span>
+          <span class="total-val" id="cartTotal">₹0.00</span>
+        </div>
+      </div>
+      <button class="checkout-btn" id="checkoutBtn" disabled>
+        Proceed to Checkout
+      </button>
+    </div>
+  </aside>
+  <div class="cart-backdrop" id="cartBackdrop"></div>
+
+  <!-- Checkout Modal -->
+  <div class="modal-backdrop" id="checkoutModal" role="dialog" aria-modal="true">
+    <div class="modal-card checkout-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">💳</div>
+          <div>
+            <h3>Complete Your FoodRush Order</h3>
+            <p>Will be assigned to next available C Worker Thread</p>
+          </div>
+        </div>
+        <button class="modal-close" id="closeCheckoutBtn">&times;</button>
+      </div>
+
+      <form id="checkoutForm" class="modal-body">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="custName">Full Name *</label>
+            <input type="text" id="custName" class="custom-input" required placeholder="John Doe">
+          </div>
+          <div class="form-group flex-1">
+            <label for="custPhone">Phone Number *</label>
+            <input type="tel" id="custPhone" class="custom-input" required placeholder="9876543210">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="custEmail">Email Address *</label>
+          <input type="email" id="custEmail" class="custom-input" required placeholder="john@example.com">
+        </div>
+        <div class="form-group">
+          <label for="custAddress">Delivery Address *</label>
+          <textarea id="custAddress" class="custom-input" rows="2" required placeholder="Room 402, Engineering Hostel / Apartment address..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="custNotes">Special Kitchen Instructions</label>
+          <input type="text" id="custNotes" class="custom-input" placeholder="Extra spicy, less ice, ringing doorbell...">
+        </div>
+
+        <div class="checkout-review">
+          <div class="review-total">
+            <span>Payable Amount:</span>
+            <strong id="checkoutFinalTotal">₹0.00</strong>
+          </div>
+          <div class="payment-method-selector">
+            <label class="radio-label">
+              <input type="radio" name="payMethod" value="CASH" checked>
+              <span>Cash on Delivery</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="payMethod" value="UPI">
+              <span>Instant UPI / QR</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary-lg w-100" id="submitOrderBtn">
+          Confirm Order &amp; Dispatch Thread
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Auth Modal (Login / Register) -->
+  <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true">
+    <div class="modal-card auth-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">🔐</div>
+          <div>
+            <h3 id="authModalTitle">Sign In to FoodRush</h3>
+            <p>Access your orders and exclusive privileges</p>
+          </div>
+        </div>
+        <button class="modal-close" id="closeAuthBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="auth-switch">
+          <button class="auth-tab active" id="tabLogin">Sign In</button>
+          <button class="auth-tab" id="tabRegister">Create Account</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form active">
+          <div class="form-group">
+            <label for="loginUser">Username</label>
+            <input type="text" id="loginUser" class="custom-input" required placeholder="admin or john">
+          </div>
+          <div class="form-group">
+            <label for="loginPass">Password</label>
+            <input type="password" id="loginPass" class="custom-input" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-primary-lg w-100">Sign In</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" class="auth-form">
+          <div class="form-group">
+            <label for="regUser">Username *</label>
+            <input type="text" id="regUser" class="custom-input" required placeholder="Pick a username">
+          </div>
+          <div class="form-group">
+            <label for="regEmail">Email *</label>
+            <input type="email" id="regEmail" class="custom-input" required placeholder="name@college.edu">
+          </div>
+          <div class="form-group">
+            <label for="regPass">Password *</label>
+            <input type="password" id="regPass" class="custom-input" required placeholder="Create strong password">
+          </div>
+          <div class="form-group">
+            <label for="regName">Full Name</label>
+            <input type="text" id="regName" class="custom-input" placeholder="Your name">
+          </div>
+          <button type="submit" class="btn-primary-lg w-100">Register</button>
+        </form>
+
+        <div class="demo-logins">
+          <span>Quick Demo Access:</span>
+          <button type="button" class="chip-btn" id="fillAdminCreds">Fill Admin</button>
+          <button type="button" class="chip-btn" id="fillCustomerCreds">Fill Customer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Interactive Order Tracking Modal Innovation -->
+  <div class="modal-backdrop" id="trackerModal" role="dialog" aria-modal="true">
+    <div class="modal-card tracker-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">🛵</div>
+          <div>
+            <h3 id="trackModalOrderId">Live Order Tracker</h3>
+            <p id="trackModalSub">Live order updates every 4 seconds</p>
+          </div>
+        </div>
+        <button class="modal-close" id="closeTrackerBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Delivery Progress Stepper -->
+        <div class="stepper-track">
+          <div class="step-node active" id="step1">
+            <div class="step-circle">1</div>
+            <div class="step-label">Order Placed</div>
+            <small class="step-meta" id="stepTime1">Confirmed</small>
+          </div>
+          <div class="step-line" id="line1"></div>
+          <div class="step-node" id="step2">
+            <div class="step-circle">2</div>
+            <div class="step-label">Kitchen Prep</div>
+            <small class="step-meta" id="stepTime2">In Oven</small>
+          </div>
+          <div class="step-line" id="line2"></div>
+          <div class="step-node" id="step3">
+            <div class="step-circle">3</div>
+            <div class="step-label">Quality Check</div>
+            <small class="step-meta" id="stepTime3">Packed</small>
+          </div>
+          <div class="step-line" id="line3"></div>
+          <div class="step-node" id="step4">
+            <div class="step-circle">4</div>
+            <div class="step-label">Out for Delivery</div>
+            <small class="step-meta" id="stepTime4">On Route</small>
+          </div>
+          <div class="step-line" id="line4"></div>
+          <div class="step-node" id="step5">
+            <div class="step-circle">5</div>
+            <div class="step-label">Delivered</div>
+            <small class="step-meta" id="stepTime5">Arrived</small>
+          </div>
+        </div>
+
+        <!-- Simulated Live GPS Radar & Driver Map View -->
+        <div class="sim-map-card">
+          <div class="map-radar-header">
+            <div class="live-pill"><span class="pulse-dot"></span> LIVE ORDER SYNC</div>
+            <span class="eta-pill" id="trackEtaDisplay" aria-live="polite">⚡ Est. Arrival: 18-22 Mins</span>
+          </div>
+          <div class="sim-map-visual">
+            <div class="map-route-line"></div>
+            <div class="map-point restaurant-point" title="FoodRush Smart Cloud Kitchen">
+              <span class="map-pin-icon">🍳</span>
+              <span class="map-pin-lbl">Cloud Kitchen</span>
+            </div>
+            <div class="map-rider-marker" id="riderMarker" title="Rider in transit">
+              <span class="rider-icon">🛵</span>
+              <span class="rider-name-tag">Rider Alex</span>
+            </div>
+            <div class="map-point customer-point" title="Your Delivery Destination">
+              <span class="map-pin-icon">📍</span>
+              <span class="map-pin-lbl" id="trackDestLabel">Delivery Address</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order & Dispatch Meta -->
+        <div class="tracker-info-grid">
+          <div class="track-info-item">
+            <span class="track-label">C Worker Thread</span>
+            <strong class="track-val text-accent" id="trackTidDisplay">Worker TID: 4</strong>
+          </div>
+          <div class="track-info-item">
+            <span class="track-label">Smart Dispatch Algorithm</span>
+            <strong class="track-val text-info">Dynamic POSIX Priority Worker</strong>
+          </div>
+          <div class="track-info-item">
+            <span class="track-label">Destination</span>
+            <strong class="track-val" id="trackAddressDisplay">Chennai</strong>
+          </div>
+          <div class="track-info-item">
+            <span class="track-label">Total Amount</span>
+            <strong class="track-val text-success" id="trackTotalDisplay">₹0.00</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <span class="brand-name">Food<span class="highlight">Rush</span></span>
+        <p>FoodRush Enterprise &bull; Next-Gen Autonomous Food Delivery Platform</p>
+        <p class="os-credits">Engineered with Native C Concurrency, POSIX Multi-Core Scheduling &amp; Microsecond SQLite WAL Engine</p>
+      </div>
+      <div class="footer-tech">
+        <span class="tech-tag">Pure C HTTP Server</span>
+        <span class="tech-tag">Pthread Worker Pool</span>
+        <span class="tech-tag">POSIX Condition Variables</span>
+        <span class="tech-tag">SQLite3 C API</span>
+        <span class="tech-tag">Winsock2 / BSD Sockets</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js?v=20261029-local-food-art-v2"></script>
+</body>
+</html>

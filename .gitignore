@@ -1,0 +1,7 @@
+obj/
+logs/
+*.o
+*.obj
+*.exe
+*.log
+db/
