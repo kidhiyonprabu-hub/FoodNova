@@ -303,22 +303,61 @@ static void process_order_task(void *arg)
 void handle_post_order(http_request_t *req, http_response_t *res, const char *pp)
 {
     (void)pp;
+    LOG_INFO("handle_post_order received body (len=%d): [%s]", req->body_len, req->body);
 
     /* Parse order JSON */
     char cname[MAX_NAME_LEN]="", cemail[MAX_EMAIL_LEN]="",
          cphone[MAX_PHONE_LEN]="", caddr[MAX_ADDRESS_LEN]="";
 
+    /* Extract customer name: support customer_name, name, full_name, customerName, custName */
     if (!json_get_string(req->body, "customer_name",    cname,  sizeof(cname)) || !*cname) {
-        json_get_string(req->body, "name", cname, sizeof(cname));
+        if (!json_get_string(req->body, "name",         cname,  sizeof(cname)) || !*cname) {
+            if (!json_get_string(req->body, "full_name", cname, sizeof(cname)) || !*cname) {
+                if (!json_get_string(req->body, "customerName", cname, sizeof(cname)) || !*cname) {
+                    json_get_string(req->body, "custName", cname, sizeof(cname));
+                }
+            }
+        }
     }
+
+    /* Extract customer email: support customer_email, email, customerEmail, custEmail */
     if (!json_get_string(req->body, "customer_email",   cemail, sizeof(cemail)) || !*cemail) {
-        json_get_string(req->body, "email", cemail, sizeof(cemail));
+        if (!json_get_string(req->body, "email",        cemail, sizeof(cemail)) || !*cemail) {
+            if (!json_get_string(req->body, "customerEmail", cemail, sizeof(cemail)) || !*cemail) {
+                json_get_string(req->body, "custEmail", cemail, sizeof(cemail));
+            }
+        }
     }
+
+    /* Extract customer phone: support phone, customer_phone, customerPhone, custPhone */
     if (!json_get_string(req->body, "phone",            cphone, sizeof(cphone)) || !*cphone) {
-        json_get_string(req->body, "customer_phone",   cphone, sizeof(cphone));
+        if (!json_get_string(req->body, "customer_phone", cphone, sizeof(cphone)) || !*cphone) {
+            if (!json_get_string(req->body, "customerPhone", cphone, sizeof(cphone)) || !*cphone) {
+                json_get_string(req->body, "custPhone", cphone, sizeof(cphone));
+            }
+        }
     }
+
+    /* Extract delivery address: support delivery_address, address, deliveryAddress, custAddress */
     if (!json_get_string(req->body, "delivery_address", caddr,  sizeof(caddr)) || !*caddr) {
-        json_get_string(req->body, "address", caddr, sizeof(caddr));
+        if (!json_get_string(req->body, "address",      caddr,  sizeof(caddr)) || !*caddr) {
+            if (!json_get_string(req->body, "deliveryAddress", caddr, sizeof(caddr)) || !*caddr) {
+                json_get_string(req->body, "custAddress", caddr, sizeof(caddr));
+            }
+        }
+    }
+
+    /* Session fallback: if user is logged in, fill any missing customer info from user account */
+    session_t *s = get_session(req);
+    int uid = s ? s->user_id : 0;
+    if (uid > 0) {
+        db_user_t u; memset(&u, 0, sizeof(u));
+        if (db_get_user_by_id(uid, &u) == RESULT_OK) {
+            if (!*cname && *u.full_name) SAFE_STRNCPY(cname, u.full_name, sizeof(cname));
+            if (!*cemail && *u.email)    SAFE_STRNCPY(cemail, u.email, sizeof(cemail));
+            if (!*cphone && *u.phone)    SAFE_STRNCPY(cphone, u.phone, sizeof(cphone));
+            if (!*caddr && *u.address)   SAFE_STRNCPY(caddr, u.address, sizeof(caddr));
+        }
     }
 
     if (!*cname || !*cemail || !*caddr) {
@@ -338,14 +377,13 @@ void handle_post_order(http_request_t *req, http_response_t *res, const char *pp
     SAFE_STRNCPY(o->customer_email,   cemail, sizeof(o->customer_email));
     SAFE_STRNCPY(o->customer_phone,   cphone, sizeof(o->customer_phone));
     SAFE_STRNCPY(o->delivery_address, caddr,  sizeof(o->delivery_address));
-
-    /* session optional */
-    session_t *s = get_session(req);
-    o->user_id = s ? s->user_id : 0;
+    o->user_id = uid;
 
     /* Parse items array: [{"menu_item_id":1,"quantity":2},...] */
     const char *items_start = strstr(req->body, "\"items\"");
+    if (!items_start) items_start = strstr(req->body, "items");
     if (!items_start) items_start = strstr(req->body, "\"cart\"");
+    if (!items_start) items_start = strstr(req->body, "cart");
     if (!items_start) {
         char err[256]; json_err("Order items are required", err, sizeof(err));
         free(task); respond_json(res, 400, err); return;

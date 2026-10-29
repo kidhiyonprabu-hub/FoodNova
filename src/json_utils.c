@@ -218,42 +218,94 @@ int json_err(const char *message, char *buf, int buf_len)
 
 static const char *find_key(const char *json, const char *key)
 {
+    if (!json || !key || !*json || !*key) return NULL;
+
+    /* 1. Try exact quoted key: "key" */
     char pattern[256];
     snprintf(pattern, sizeof(pattern), "\"%s\"", key);
     const char *p = strstr(json, pattern);
-    if (!p) return NULL;
-    p += strlen(pattern);
-    while (*p && (*p == ' ' || *p == ':' || *p == '\t' || *p == '\r' || *p == '\n')) p++;
-    return p;
+    if (p) {
+        p += strlen(pattern);
+        while (*p && (*p == ' ' || *p == ':' || *p == '=' || *p == '\t' || *p == '\r' || *p == '\n')) p++;
+        return p;
+    }
+
+    /* 2. Try unquoted key or form parameter: key: or key= */
+    int klen = (int)strlen(key);
+    const char *cur = json;
+    while ((cur = strstr(cur, key)) != NULL) {
+        int valid_start = (cur == json) ||
+                          (cur[-1] == '{' || cur[-1] == ',' || cur[-1] == '&' ||
+                           cur[-1] == ' ' || cur[-1] == '\t' || cur[-1] == '\n' || cur[-1] == '\r');
+        if (valid_start) {
+            const char *after = cur + klen;
+            while (*after == ' ' || *after == '\t') after++;
+            if (*after == ':' || *after == '=') {
+                after++;
+                while (*after && (*after == ' ' || *after == '\t' || *after == '\r' || *after == '\n')) after++;
+                return after;
+            }
+        }
+        cur += klen;
+    }
+
+    return NULL;
 }
 
 int json_get_string(const char *json, const char *key, char *val, int val_len)
 {
+    if (!val || val_len <= 0) return 0;
+    val[0] = '\0';
     const char *p = find_key(json, key);
-    if (!p || *p != '"') return 0;
-    p++; /* skip opening quote */
+    if (!p) return 0;
+
     int j = 0;
-    while (*p && *p != '"' && j < val_len-1) {
-        if (*p == '\\') {
-            p++;
-            if      (*p == '"')  val[j++] = '"';
-            else if (*p == '\\') val[j++] = '\\';
-            else if (*p == 'n')  val[j++] = '\n';
-            else if (*p == 't')  val[j++] = '\t';
-            else                 val[j++] = *p;
-        } else {
-            val[j++] = *p;
+    if (*p == '"') {
+        /* Quoted string */
+        p++; /* skip opening quote */
+        while (*p && *p != '"' && j < val_len - 1) {
+            if (*p == '\\') {
+                p++;
+                if      (*p == '"')  val[j++] = '"';
+                else if (*p == '\\') val[j++] = '\\';
+                else if (*p == 'n')  val[j++] = '\n';
+                else if (*p == 't')  val[j++] = '\t';
+                else if (*p)         val[j++] = *p;
+            } else {
+                val[j++] = *p;
+            }
+            if (*p) p++;
         }
-        p++;
+    } else if (*p != '{' && *p != '[') {
+        /* Unquoted string (e.g. from curl on Windows or url-encoded form) */
+        while (*p && *p != ',' && *p != '}' && *p != ']' && *p != '&' &&
+               *p != '\r' && *p != '\n' && j < val_len - 1) {
+            if (*p == '+') {
+                val[j++] = ' ';
+            } else if (*p == '%' && *(p+1) && *(p+2)) {
+                char h[3] = {*(p+1), *(p+2), '\0'};
+                val[j++] = (char)strtol(h, NULL, 16);
+                p += 2;
+            } else {
+                val[j++] = *p;
+            }
+            p++;
+        }
+        /* Trim trailing whitespace */
+        while (j > 0 && (val[j-1] == ' ' || val[j-1] == '\t')) j--;
+    } else {
+        return 0;
     }
+
     val[j] = '\0';
-    return 1;
+    return j > 0 ? 1 : 0;
 }
 
 int json_get_int(const char *json, const char *key, int *val)
 {
     const char *p = find_key(json, key);
     if (!p) return 0;
+    if (*p == '"') p++;
     *val = (int)strtol(p, NULL, 10);
     return 1;
 }
@@ -262,6 +314,7 @@ int json_get_double(const char *json, const char *key, double *val)
 {
     const char *p = find_key(json, key);
     if (!p) return 0;
+    if (*p == '"') p++;
     *val = strtod(p, NULL);
     return 1;
 }

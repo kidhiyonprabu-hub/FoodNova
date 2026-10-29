@@ -179,10 +179,15 @@ function initEventListeners() {
     closeCart();
     // Pre-fill user profile if logged in
     if (state.user) {
-      if (state.user.full_name) document.getElementById('custName').value = state.user.full_name;
-      if (state.user.phone) document.getElementById('custPhone').value = state.user.phone;
-      if (state.user.email) document.getElementById('custEmail').value = state.user.email;
-      if (state.user.address) document.getElementById('custAddress').value = state.user.address;
+      const u = state.user;
+      const nameVal = u.full_name || u.name || u.customer_name || u.username || '';
+      const phoneVal = u.phone || u.customer_phone || '';
+      const emailVal = u.email || u.customer_email || '';
+      const addrVal = u.address || u.delivery_address || '';
+      if (nameVal) document.getElementById('custName').value = nameVal;
+      if (phoneVal) document.getElementById('custPhone').value = phoneVal;
+      if (emailVal) document.getElementById('custEmail').value = emailVal;
+      if (addrVal) document.getElementById('custAddress').value = addrVal;
     }
     const finalTotal = calculateTotals().total;
     document.getElementById('checkoutFinalTotal').textContent = `₹${finalTotal.toFixed(2)}`;
@@ -499,10 +504,10 @@ async function handleCheckoutSubmit(e) {
     return;
   }
 
-  const customerName = document.getElementById('custName').value.trim();
-  const customerPhone = document.getElementById('custPhone').value.trim();
-  const customerEmail = document.getElementById('custEmail').value.trim();
-  const deliveryAddress = document.getElementById('custAddress').value.trim();
+  const customerName = (document.getElementById('custName')?.value || '').trim();
+  const customerPhone = (document.getElementById('custPhone')?.value || '').trim();
+  const customerEmail = (document.getElementById('custEmail')?.value || '').trim();
+  const deliveryAddress = (document.getElementById('custAddress')?.value || '').trim();
 
   // Validate required fields
   if (!customerName || !customerEmail || !deliveryAddress) {
@@ -520,17 +525,27 @@ async function handleCheckoutSubmit(e) {
 
   const orderPayload = {
     customer_name: customerName,
+    name: customerName,
+    full_name: customerName,
+    customerName: customerName,
+    custName: customerName,
     customer_email: customerEmail,
+    email: customerEmail,
+    customerEmail: customerEmail,
+    custEmail: customerEmail,
     delivery_address: deliveryAddress,
+    address: deliveryAddress,
+    deliveryAddress: deliveryAddress,
+    custAddress: deliveryAddress,
     phone: customerPhone,
     customer_phone: customerPhone,
-    email: customerEmail,
-    address: deliveryAddress,
+    customerPhone: customerPhone,
+    custPhone: customerPhone,
     items: state.cart.map(c => ({
       menu_item_id: c.id,
       item_id: c.id,
       quantity: c.qty,
-      notes: document.getElementById('custNotes').value.trim()
+      notes: (document.getElementById('custNotes')?.value || '').trim()
     }))
   };
 
